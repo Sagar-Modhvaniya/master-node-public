@@ -1,7 +1,5 @@
 import joi from "joi";
-import Master from "../../models/Master";
-import { VALIDATION } from "../../constants/common";
-import { getDocumentByQuery } from "../../helpers/dbService";
+
 
 export default joi
   .object({
@@ -28,15 +26,5 @@ export default joi
     deletedBy: joi.object().optional(),
     deletedAt: joi.date().optional(),
     isActive: joi.boolean().default(true),
-  })
-  .custom(async (obj) => {
-    const { parentId, code } = obj;
-    let search: { code: string; parentId?: string } = { code };
-    if (parentId) search.parentId = parentId;
-    const result = await getDocumentByQuery(Master, search);
-    if (result) {
-      throw new Error(VALIDATION.MASTER_EXISTS);
-    }
-    return obj;
   })
   .unknown(false);

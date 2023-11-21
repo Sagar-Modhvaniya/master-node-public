@@ -4,8 +4,6 @@ import {
   recordNotFound,
 } from '../helpers/messages';
 import defaults from '../helpers/defaults';
-
-import Master from '../models/Master';
 import * as masterService from '../services/master';
 import {
   bulkUpdate,
@@ -13,15 +11,26 @@ import {
   createDocument,
   getDocumentByQuery,
 } from '../helpers/dbService';
+import mongoose from 'mongoose';
+import { VALIDATION } from '../constants/common';
+
 
 const catchAsync = (fn: any) => {
   return defaults.catchAsync(fn);
 };
 
 export const createMaster = catchAsync(async (req: any, res: any) => {
+  const {Master, File}  = req?.clientDBConnection ? req?.clientDBConnection.models : mongoose.models
   const data = new Master({
     ...req.body,
   });
+  const { parentId, code } = req.body;
+  let search: { code: string; parentId?: string } = { code };
+  if (parentId) search.parentId = parentId;
+  const resp = await getDocumentByQuery(Master, search);
+  if (resp) {
+    throw new Error(VALIDATION.MASTER_EXISTS);
+  }
   if (data.parentId && data.isDefault) {
     await bulkUpdate(
       Master,
@@ -31,7 +40,7 @@ export const createMaster = catchAsync(async (req: any, res: any) => {
   }
   const masterData = await createDocument(Master, data);
   const result = await Master.populate(masterData, [
-    { path: 'img', select: 'uri' },
+    { path: 'img', model: File, select: 'uri' },
   ]);
   if (result) {
     let section = result.parentCode ? 'submaster' : 'master';
@@ -41,6 +50,7 @@ export const createMaster = catchAsync(async (req: any, res: any) => {
 });
 
 export const updateMaster = catchAsync(async (req: any, res: any) => {
+  const Master  = req?.clientDBConnection ? req?.clientDBConnection.models.Master : mongoose.models.master
   const id = req.params.id;
   const data = req.body;
   if (data.isDefault) {
@@ -72,6 +82,7 @@ export const updateMaster = catchAsync(async (req: any, res: any) => {
 });
 
 export const activateMaster = catchAsync(async (req: any, res: any) => {
+  const Master  = req?.clientDBConnection ? req?.clientDBConnection.models.Master : mongoose.models.master
   const id = req.params.id;
   const data = req.body;
   const result: any = await findOneAndUpdateDocument(
@@ -93,6 +104,7 @@ export const activateMaster = catchAsync(async (req: any, res: any) => {
 });
 
 export const webVisibleMaster = catchAsync(async (req: any, res: any) => {
+  const Master  = req?.clientDBConnection ? req?.clientDBConnection.models.Master : mongoose.models.master
   const id = req.params.id;
   const data = req.body;
   const result: any = await findOneAndUpdateDocument(
@@ -114,9 +126,10 @@ export const webVisibleMaster = catchAsync(async (req: any, res: any) => {
 });
 
 export const defaultMaster = catchAsync(async (req: any, res: any) => {
+  const Master  = req?.clientDBConnection ? req?.clientDBConnection.models.Master : mongoose.models.master
   const result: any = await masterService.defaultMaster(
     req.params.id,
-    req.body
+    req.body,Master
   );
   let section = result.parentCode ? 'submaster' : 'master';
   if (result.isDefault) {
@@ -128,12 +141,14 @@ export const defaultMaster = catchAsync(async (req: any, res: any) => {
 });
 
 export const sequenceMaster = catchAsync(async (req: any, res: any) => {
-  const _result = await masterService.sequenceMaster(req.body.sequences);
+  const Master  = req?.clientDBConnection ? req?.clientDBConnection.models.Master : mongoose.models.master
+  const _result = await masterService.sequenceMaster(req.body.sequences,Master);
   res.message = req?.i18n?.t('submaster.seq');
   return successResponse({}, res);
 });
 
 export const deleteMaster = catchAsync(async (req: any, res: any) => {
+  const Master  = req?.clientDBConnection ? req?.clientDBConnection.models.Master : mongoose.models.master
   const id = req.body.id;
   let isSubmaster = false;
   const master = await Master.findById(id);
@@ -163,6 +178,7 @@ export const deleteMaster = catchAsync(async (req: any, res: any) => {
 });
 
 export const listMaster = catchAsync(async (req: any, res: any) => {
+  const {Master,File}  = req?.clientDBConnection ? req?.clientDBConnection.models : mongoose.models
   let { page, limit, sort, populate } = req.body.options;
   const isCountOnly = req.body.isCountOnly || false;
   const search = req.body.search || '';
@@ -179,14 +195,14 @@ export const listMaster = catchAsync(async (req: any, res: any) => {
     typeof req.body.isActive !== 'undefined'
       ? req.body.isActive || false
       : null;
-  let languages: undefined | string[];
-  if (Array.isArray(defaults.languages) && defaults.languages.length > 0) {
-    let providedLanguages = defaults.languages.map((lan) => lan.code);
-    if (req.body.language && providedLanguages.includes(req.body.language)) {
-      languages = [req.body.language];
-    } else languages = providedLanguages;
-  } else languages = undefined;
-
+      let languages: undefined | string[];
+      if (Array.isArray(defaults.languages) && defaults.languages.length > 0) {
+        let providedLanguages = defaults.languages.map((lan) => lan.code);
+        if (req.body.language && providedLanguages.includes(req.body.language)) {
+          languages = [req.body.language];
+        } else languages = providedLanguages;
+      } else languages = undefined;
+    
   const result = await masterService.listMaster(
     customOptions,
     isCountOnly,
@@ -195,7 +211,8 @@ export const listMaster = catchAsync(async (req: any, res: any) => {
     isActive === null ? [true, false] : [isActive],
     populate,
     !all,
-    languages
+    Master,
+    File
   );
   let section = customQuery.parentCode ? 'submaster' : 'master';
   if (result) {

@@ -22,16 +22,20 @@ const namesSchema = defaults.languages.reduce((acc: any, lang) => {
   return acc;
 }, {});
 
-export const MasterSchema = new Schema<MasterType>(
+const MasterSchema = new Schema<MasterType>(
   {
     name: { type: String }, // name of
     // @ts-ignore
     names: namesSchema,
     code: { type: String, required: true }, // master code
     desc: { type: String }, // description
-    parentId: { type: Schema.Types.ObjectId, ref: 'master' }, //parent id is belongs to master
+    parentId: { type: Schema.Types.ObjectId, 
+      // ref: 'master' 
+    }, //parent id is belongs to master
     parentCode: { type: String }, // code of parent master
-    img: { type: Schema.Types.ObjectId, ref: 'file' }, //img url
+    img: { type: Schema.Types.ObjectId, 
+      // ref: 'file' 
+    }, //img url
     isDefault: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
     seq: { type: Number }, // sub master value sequence
@@ -40,16 +44,23 @@ export const MasterSchema = new Schema<MasterType>(
     canDel: { type: Boolean, default: true },
     deletedAt: { type: Date },
     extra: { type: String },
-    createdBy: { type: Schema.Types.ObjectId, ref: 'user' },
-    updatedBy: [{ type: Schema.Types.ObjectId, ref: 'user' }],
-    deletedBy: { type: Schema.Types.ObjectId, ref: 'user' },
+    createdBy: { type: Schema.Types.ObjectId, 
+      // ref: 'user' 
+  },
+    updatedBy: [{ type: Schema.Types.ObjectId, 
+      // ref: 'user' 
+  }],
+    deletedBy: { type: Schema.Types.ObjectId, 
+      // ref: 'user' 
+  },
+
   },
   { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } }
 );
 
 MasterSchema.pre('save', async function (next) {
   if ((this as any).parentId) {
-    const masterData: any = await Master.findOne({
+    const masterData: any = await (this as any).constructor.findOne({
       parentId: (this as any).parentId,
       deletedAt: { $exists: false },
     }).sort({ createdAt: -1 });
@@ -95,6 +106,5 @@ MasterSchema.method('toJSON', function () {
 MasterSchema.plugin(uniqueValidator);
 MasterSchema.plugin(mongoosePaginate);
 
-const Master = model('master', MasterSchema, 'master');
 
-export default Master;
+export default MasterSchema;

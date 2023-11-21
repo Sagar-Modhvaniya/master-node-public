@@ -12,7 +12,7 @@ declare module '@knovator/masters-node' {
 
   function masters(props: MastersProps): import('express').Router;
 
-  var Master: import('mongoose').Model<MasterType>;
+  var MasterSchema: import('mongoose').Schema<MasterType>;
 }
 
 type MasterType = {

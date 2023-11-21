@@ -1,4 +1,3 @@
-import Master from "../models/Master";
 import {
   getDocumentByQuery,
   bulkUpdate,
@@ -6,9 +5,9 @@ import {
   countDocument,
   getAllDocuments,
 } from "../helpers/dbService";
-import { UpdateQuery } from "mongoose";
+import { UpdateQuery, Model } from "mongoose";
 
-export const defaultMaster = async (id: string, data: UpdateQuery<MasterType>) => {
+export const defaultMaster = async (id: string, data: UpdateQuery<MasterType>,Master: Model<MasterType>) => {
   try {
     const masterData: any = await getDocumentByQuery(Master, { _id: id });
     if (masterData.parentId) {
@@ -34,7 +33,7 @@ export const defaultMaster = async (id: string, data: UpdateQuery<MasterType>) =
 };
 
 export const sequenceMaster = async (
-  data: UpdateQuery<UpdateSequenceData[]>
+  data: UpdateQuery<UpdateSequenceData[]>, Master: Model<MasterType>
 ) => {
   try {
     const bulkSequenceUpdates = data.map((obj: UpdateSequenceData) => {
@@ -66,6 +65,8 @@ export const listMaster = async (
   onlyActive = [true],
   populate: any,
   pagination = true,
+  Master: Model<MasterType>,
+  File : any,
   languages: undefined | string[] = undefined
 ) => {
   try {
@@ -108,7 +109,7 @@ export const listMaster = async (
       projection: '',
       // lean: true,
       // leanWithId: true,
-      populate: Array.isArray(populate) ? populate : ['img'],
+      populate: Array.isArray(populate) ? populate : [{path: 'img', model:File}],
       pagination,
     };
     if (customQuery.parentCode) {
